@@ -1,0 +1,150 @@
+---
+title: "Chicago Salaries"
+author: "Madhav sai Avanigadda"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+# Installing and Switching on the required packages
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(naniar)
+library(ggplot2)
+library(epitools)
+library(forcats)
+library(stringr)
+library(tibble)
+library(lubridate)
+library(skimr)
+library(jhur)
+library(broom)
+library(faraway)
+```
+
+
+**1.Please describe what your data looks like and where you got it. Identify what the variables and samples are. Describe how the data was originally created.**
+
+The dataset consists of information about current employees, their salaries, and position titles within various departments of an organization.
+
+#### *Variables*
+  1. Job Titles: The title of the job held by the employee.
+  2. Department: The department where the employee works.
+  3. Full or Part-Time: Indicates whether the employee works full time (F) or part time (P).
+  4. Salary or Hourly: Specifies if the employee is paid a salary or on an hourly basis.
+  5. Typical Hours: The typical number of hours worked per week by hourly employees (non-null only for hourly workers).
+  6. Annual Salary: The annual salary for salaried employees (non-null only for salaried workers).
+  7. Hourly Rate: The hourly rate for hourly employees (non-null only for hourly workers).
+  
+#### *Data Description*
+- The data set consists of 31,887 entries.
+- There are non-null entries for all employees in the categories of job titles, department, full or part-time status, and salary or hourly status.
+- Typical hours, annual salary, and hourly rate are populated based on whether an employee is hourly or salaried. For example, hourly employees have entries under "Typical Hours" and "Hourly Rate," whereas salaried employees have entries under "Annual Salary."
+  
+#### *Data Origin*
+This data seems to be an official record from a public or large private organization, possibly tabeled for administrative, financial planning, or human resource management purposes. It reflects structured employment data that would typically be maintained in a payroll or human resources information system.
+This data is valuable for analysis related to employment patterns, salary distributions, and departmental staffing within the organization.
+
+**2.Perform at least three different data sub-setting, cleaning, or manipulation methods that were described in this course on your data. Examples are: renaming the columns, recording values, reshaping the data, filtering the data, etc.**
+```{r}
+project <- read.csv("Project.csv")
+project <- rename(project,Name_of_the_Job = Job.Titles)
+project <- rownames_to_column(project,"Serial number")
+head(project, n=5)
+# I have created a column where total annual hourly salary is calculated by making an assumption individual will be working 50 weeks in an year
+project$HourlySalary <- 50* project$Typical.Hours * project$Hourly.Rate
+project$TotalSalary <- ifelse(is.na(project$Annual.Salary), project$HourlySalary, project$Annual.Salary)
+head(project, n=10)
+```
+**3.Please describe what you did to clean/subset/wrangle/manipulate your data and why.**
+i have renamed a attribute in the dataset as it is better and convenient,added a column name as dataset don't have one,then i have created a total salary column as i have many missing values in hourly rate Typicalhours and annual salary separately for my further usage i have created "Total salary" column 
+
+**4.Make two different kinds of visualizations of your data using ggplot2. Describe patterns that your visualizations demonstrate and the reasons for why you chose to explore those patterns.**
+```{r}
+gg_miss_var(project)
+```
+```{r}
+### Plot to see how many missing values are present after i created new column "Total salary"
+```
+
+```{r}
+ggplot(project, aes(x = Full.or.Part.Time, y = TotalSalary)) +
+  stat_summary(fun = mean, geom = "bar", fill = "red") +
+  labs(title = "Total salary for FUll or Part time",
+       x = "Dept",
+       y = "Average Total Salary") +
+  theme_minimal()
+```
+
+```{r}
+### i want see the Total salary of full time and part time employees as my dataset don't show any.###
+```
+
+
+```{r}
+salary_data <- project %>%
+  filter(!is.na(TotalSalary))
+
+
+ggplot(salary_data, aes(x=TotalSalary)) +
+  geom_histogram(bins=30, fill="red", color="black") +
+  theme_minimal() +
+  labs(title="Distribution of Total Salaries", x="Totall Salary", y="Frequency")
+
+```
+
+
+**5.Perform a numeric summarization of your data motivated by patterns observed in Step 4. This can involve summarizing the data to describe aspects about it (quartiles, means, range etc.).**
+
+```{r}
+summary_project <- summary(project$TotalSalary)
+print(summary_project)
+sd_project <- sd(project$TotalSalary) 
+range_project <- range(project$TotalSalary)
+
+
+cat("Summary of TotalSalary:\n", summary_project, "\nStandard Deviation of TotalSalary:", sd_project, 
+    "\nRange of TotalSalary:", range_project, sep="\n")
+mean_Totalsalary <- mean(project$TotalSalary,na.rm = TRUE)
+mean_Totalsalary
+median_Totalsalary <- median(project$TotalSalary)
+median_Totalsalary
+range_Totalsalary <- range(project$TotalSalary)
+range_Totalsalary
+```
+
+**6.Describe what numeric summarization you performed and why. Provide some simple interpretation about what your summary might indicate about your data.**
+
+```{r}
+###For the Totalsalary i created i have performed numeric summarization to check the mean media standard deviation and finally range. The summary of TotalSalary shows a wide range in salaries from $4,000 to $291,696 with a median of $102,870, indicating a right-skewed distribution as the mean ($99,236) is slightly below the median. The standard deviation of $28,237.29 suggests a substantial variability in salary amounts across the dataset.###
+```
+
+
+**7.Perform an inferential statistical test of your data. E.g., a t-test, a correlation test, linear regression, etc., informed by information provide in previous steps.**
+```{r}
+t_test_result <- t.test(project$TotalSalary,mu = 10000)
+print(t_test_result)
+```
+**8.Describe what inferential statistical test you performed in (7) and why. Provide some simple interpretation about what your analysis might indicate about your data.**
+
+```{r}
+###I want to know the mean sample and comparison of the column i have created so i did t-test, based on the extremely low p-value (< 0.05), we reject the null hypothesis and conclude that there is strong evidence to suggest that the true mean total salary is not equal to $100,000. The 95% confidence interval further supports this conclusion, as it does not include the hypothesized value of $100,000. Therefore, it seems that the average total salary in your data set significantly differs from $100,000.###
+```
+
+**9.Perform at least one more inferential statistics or statistical learning/predictive analytics test of your data informed by the above steps. You’re welcome to pull in an analysis not covered in class for this step.**
+```{r}
+#I'm performing a anova analysis as i want to know how salary varry among the departments
+result <- aov(TotalSalary ~ Department, data = project)
+summary(result)
+```
+**10.Describe what test(s) you performed in (9) and why. Provide some simple interpretation about what your analysis might indicate about your data.**
+
+```{r}
+###The ANOVA analysis i performed shows a strong statistical significance in the effect of department on salary variation, with an F value of 276.8 and a p-value less than 0.0001, indicating that departmental differences are a major factor in determining salaries. The large Sum of Sq for the Department compared to the Residuals highlights that a significant portion of the total variance in salaries is down to differences between departments.###
+```
+
+```{r}
+sessionInfo()
+```
+
